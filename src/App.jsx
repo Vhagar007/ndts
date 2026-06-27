@@ -1,39 +1,83 @@
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import './index.css'
+import Login from './pages/Login'
 import NewLR from './pages/NewLR'
 import Dispatch from './pages/Dispatch'
 import Ahmedabad from './pages/Ahmedabad'
 import Track from './pages/Track'
 import Dashboard from './pages/Dashboard'
 
-function Nav() {
+function Nav({ user, onLogout }) {
   const loc = useLocation()
   const isTrack = loc.pathname.startsWith('/track')
   if (isTrack) return null
+
+  const isOffice = user.role === 'office'
+  const isAhmedabad = user.role === 'ahmedabad'
+  const isAdmin = user.role === 'admin'
+
   return (
     <nav className="topnav no-print">
-      <a className="topnav-brand" href="/">New <span>Diamond</span> Transport</a>
-      <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/new-lr">New LR</NavLink>
-      <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dispatch">Dispatch</NavLink>
-      <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/ahmedabad">Ahmedabad</NavLink>
-      <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dashboard">Dashboard</NavLink>
+      <a className="topnav-brand" href="/">New <span>Diamond</span></a>
+      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/new-lr">New LR</NavLink>}
+      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dispatch">Dispatch</NavLink>}
+      {(isAhmedabad || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/ahmedabad">Ahmedabad</NavLink>}
+      {isAdmin && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dashboard">Dashboard</NavLink>}
       <div className="nav-right">
-        <NavLink className="btn btn-sm btn-blue no-print" to="/track">Track parcel</NavLink>
+        <span style={{ fontSize: 12, color: 'var(--text2)', marginRight: 8 }}>{user.office}</span>
+        <NavLink className="btn btn-sm btn-blue no-print" to="/track">Track</NavLink>
+        <button className="btn btn-sm no-print" style={{ marginLeft: 4 }} onClick={onLogout}>Sign out</button>
       </div>
     </nav>
   )
 }
 
+function DefaultRedirect({ user }) {
+  if (user.role === 'office') return <Navigate to="/new-lr" replace />
+  if (user.role === 'ahmedabad') return <Navigate to="/ahmedabad" replace />
+  return <Navigate to="/dashboard" replace />
+}
+
 export default function App() {
+  const [user, setUser] = useState(() => {
+    const saved = sessionStorage.getItem('ndts_user')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  function handleLogin(userData) {
+    setUser(userData)
+    sessionStorage.setItem('ndts_user', JSON.stringify(userData))
+  }
+
+  function handleLogout() {
+    setUser(null)
+    sessionStorage.removeItem('ndts_user')
+  }
+
+  // Track page is always public
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/track')) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/track" element={<Track />} />
+          <Route path="/track/:office/:lr" element={<Track />} />
+        </Routes>
+      </BrowserRouter>
+    )
+  }
+
+  if (!user) return <Login onLogin={handleLogin} />
+
   return (
     <BrowserRouter>
-      <Nav />
+      <Nav user={user} onLogout={handleLogout} />
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/new-lr" element={<NewLR />} />
-        <Route path="/dispatch" element={<Dispatch />} />
-        <Route path="/ahmedabad" element={<Ahmedabad />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<DefaultRedirect user={user} />} />
+        <Route path="/new-lr" element={<NewLR user={user} />} />
+        <Route path="/dispatch" element={<Dispatch user={user} />} />
+        <Route path="/ahmedabad" element={<Ahmedabad user={user} />} />
+        <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/track" element={<Track />} />
         <Route path="/track/:office/:lr" element={<Track />} />
       </Routes>

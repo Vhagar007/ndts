@@ -3,8 +3,8 @@ import { supabase, OFFICES, fmtDate } from '../lib/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export default function Dispatch() {
-  const [office, setOffice] = useState('')
+export default function Dispatch({ user }) {
+  const [office, setOffice] = useState(user.office === 'Admin' ? '' : user.office)
   const [truck, setTruck] = useState('')
   const [driver, setDriver] = useState('')
   const [date, setDate] = useState(today())
