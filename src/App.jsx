@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom'
 import './index.css'
 import Login from './pages/Login'
-import NewLR from './pages/NewLR'
+import LRManager from './pages/LRManager'
 import OfficeDashboard from './pages/OfficeDashboard'
 import Ahmedabad from './pages/Ahmedabad'
 import Track from './pages/Track'
@@ -19,8 +19,7 @@ function Nav({ user, onLogout }) {
     <nav className="topnav no-print">
       <a className="topnav-brand" href="/">New <span>Diamond</span></a>
       {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/office">Dashboard</NavLink>}
-      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/new-lr">New LR</NavLink>}
-      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dispatch">Dispatch</NavLink>}
+      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/lr">LR</NavLink>}
       {(isAhmedabad || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/ahmedabad">Ahmedabad</NavLink>}
       {isAdmin && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dashboard">All offices</NavLink>}
       <div className="nav-right">
@@ -73,8 +72,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<DefaultRedirect user={user} />} />
         <Route path="/office" element={<OfficeDashboard user={user} />} />
-        <Route path="/new-lr" element={<NewLR user={user} />} />
-        <Route path="/dispatch" element={<OfficeDashboard user={user} />} />
+        <Route path="/lr" element={<LRManager user={user} />} />
         <Route path="/ahmedabad" element={<Ahmedabad user={user} />} />
         <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/track" element={<Track />} />
