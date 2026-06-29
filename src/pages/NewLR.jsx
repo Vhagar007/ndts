@@ -1,13 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase, fmtDate } from '../lib/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const OFFICES = ['Bhiwandi', 'Vasai', 'Bhayandar', 'Dongri', 'Vapi']
 
+// Fixed LR ranges per office per book
+const OFFICE_BOOKS = {
+  Vasai:     { A: { start: 100001, end: 199999 }, B: { start: 200001, end: 299999 } },
+  Bhiwandi:  { A: { start: 300001, end: 399999 }, B: { start: 400001, end: 499999 } },
+  Bhayandar: { A: { start: 500001, end: 599999 }, B: { start: 600001, end: 699999 } },
+  Dongri:    { A: { start: 700001, end: 799999 }, B: { start: 800001, end: 899999 } },
+  Vapi:      { A: { start: 10001, end: 19999 }, B: { start: 20001, end: 29999 } },
+}
+
 export default function NewLR({ user }) {
   const office = user.office === 'Admin' ? '' : user.office
   const [adminOffice, setAdminOffice] = useState('')
   const activeOffice = user.office === 'Admin' ? adminOffice : office
+
+  const [selectedBook, setSelectedBook] = useState('')
+  const [lrLoading, setLRLoading] = useState(false)
+  const [lrMsg, setLRMsg] = useState(null)
 
   const [form, setForm] = useState({
     lr: '', date: today(), consignor: '', consignor_gst: '',
@@ -20,6 +33,49 @@ export default function NewLR({ user }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const payLabel = { topay: 'To Pay', paid: 'Paid', blank: '—' }
+
+  const officeBooks = activeOffice ? OFFICE_BOOKS[activeOffice] : null
+
+  useEffect(() => {
+    if (!selectedBook || !activeOffice) { setLRMsg(null); setForm(f => ({ ...f, lr: '' })); return }
+    fetchNextLR(selectedBook, activeOffice)
+  }, [selectedBook, activeOffice])
+
+  async function fetchNextLR(book, off) {
+    const bookDef = OFFICE_BOOKS[off]?.[book]
+    if (!bookDef) return
+    setLRLoading(true)
+    setLRMsg(null)
+
+    const { data, error } = await supabase
+      .from('lr_entries')
+      .select('lr_number')
+      .eq('office', off)
+      .gte('lr_number', bookDef.start.toString())
+      .lte('lr_number', bookDef.end.toString())
+      .order('lr_number', { ascending: false })
+      .limit(1)
+
+    setLRLoading(false)
+    if (error) { setLRMsg({ type: 'error', text: 'Could not fetch LR sequence.' }); return }
+
+    let next
+    if (!data || data.length === 0) {
+      next = bookDef.start
+    } else {
+      next = parseInt(data[0].lr_number) + 1
+    }
+
+    if (next > bookDef.end) {
+      setLRMsg({ type: 'error', text: `Book ${book} is full. All LR numbers used (${bookDef.start}–${bookDef.end}).` })
+      setForm(f => ({ ...f, lr: '' }))
+      return
+    }
+
+    const remaining = bookDef.end - next + 1
+    setForm(f => ({ ...f, lr: next.toString() }))
+    setLRMsg({ type: 'info', text: `Book ${book} · Next LR: ${next.toLocaleString('en-IN')} · ${remaining.toLocaleString('en-IN')} remaining` })
+  }
 
   async function handleSave() {
     if (!activeOffice || !form.lr || !form.date || !form.consignor || !form.consignee) {
@@ -37,7 +93,9 @@ export default function NewLR({ user }) {
       payment_type: form.payment,
       amount: form.amount ? parseFloat(form.amount) : null,
       truck_number: form.truck.trim() || null,
-      status: 'booked', booked_at: new Date().toISOString(),
+      book_series: selectedBook || null,
+      status: 'booked',
+      booked_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('lr_entries').insert([record]).select().single()
     setLoading(false)
@@ -47,12 +105,40 @@ export default function NewLR({ user }) {
       return
     }
     setSaved(data)
-    setMsg({ type: 'success', text: `LR ${form.lr} saved successfully.` })
+    setMsg({ type: 'success', text: `LR ${form.lr} saved.` })
+
+    // Auto-advance to next LR and clear fields
+    if (selectedBook && officeBooks?.[selectedBook]) {
+      const bookDef = officeBooks[selectedBook]
+      const next = parseInt(form.lr) + 1
+      if (next <= bookDef.end) {
+        const remaining = bookDef.end - next + 1
+        setForm(f => ({
+          ...f, lr: next.toString(),
+          consignor: '', consignor_gst: '', consignee: '', consignee_gst: '',
+          articles: '', weight: '', particulars: '', payment: 'topay', amount: '', truck: ''
+        }))
+        setLRMsg({ type: 'info', text: `Book ${selectedBook} · Next LR: ${next.toLocaleString('en-IN')} · ${remaining.toLocaleString('en-IN')} remaining` })
+      } else {
+        setLRMsg({ type: 'error', text: `Book ${selectedBook} is now full.` })
+      }
+    }
   }
 
   function handleClear() {
-    setForm({ lr: '', date: today(), consignor: '', consignor_gst: '', consignee: '', consignee_gst: '', articles: '', weight: '', particulars: '', payment: 'topay', amount: '', truck: '' })
+    setForm(f => ({
+      ...f, consignor: '', consignor_gst: '', consignee: '', consignee_gst: '',
+      articles: '', weight: '', particulars: '', payment: 'topay', amount: '', truck: ''
+    }))
     setMsg(null); setSaved(null)
+  }
+
+  function handleOfficeChange(val) {
+    setAdminOffice(val)
+    setSelectedBook('')
+    setLRMsg(null)
+    setForm(f => ({ ...f, lr: '' }))
+    setSaved(null); setMsg(null)
   }
 
   return (
@@ -68,7 +154,7 @@ export default function NewLR({ user }) {
         {user.office === 'Admin' && (
           <div className="fg">
             <label>Booking office *</label>
-            <select value={adminOffice} onChange={e => setAdminOffice(e.target.value)}>
+            <select value={adminOffice} onChange={e => handleOfficeChange(e.target.value)}>
               <option value="">— select office —</option>
               {OFFICES.map(o => <option key={o}>{o}</option>)}
             </select>
@@ -79,8 +165,38 @@ export default function NewLR({ user }) {
           <div className="office-pill">📍 {activeOffice} → Ahmedabad</div>
 
           <div className="g2">
-            <div className="fg"><label>LR number *</label><input value={form.lr} onChange={e => set('lr', e.target.value)} placeholder="e.g. 303432" /></div>
-            <div className="fg"><label>Date *</label><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></div>
+            <div className="fg">
+              <label>LR book</label>
+              <select value={selectedBook} onChange={e => { setSelectedBook(e.target.value); setSaved(null); setMsg(null) }}>
+                <option value="">— select book —</option>
+                {officeBooks && Object.entries(officeBooks).map(([key, range]) => (
+                  <option key={key} value={key}>
+                    Book {key} ({range.start.toLocaleString('en-IN')} – {range.end.toLocaleString('en-IN')})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="fg">
+              <label>LR number *
+                {lrLoading && <span style={{ fontSize: 11, color: 'var(--text2)', marginLeft: 6 }}>loading...</span>}
+              </label>
+              <input
+                value={form.lr}
+                onChange={e => { set('lr', e.target.value); setLRMsg(null) }}
+                placeholder={selectedBook ? 'Auto-filled from book' : 'Select book or enter manually'}
+                style={{ fontWeight: selectedBook ? 600 : 400, fontSize: selectedBook ? 15 : 14 }}
+              />
+              {lrMsg && (
+                <p style={{ fontSize: 11, marginTop: 3, color: lrMsg.type === 'error' ? '#993C1D' : '#185FA5' }}>
+                  {lrMsg.text}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="fg" style={{ maxWidth: 200 }}>
+            <label>Date *</label>
+            <input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
           </div>
 
           <div className="g2">
@@ -119,7 +235,7 @@ export default function NewLR({ user }) {
           <hr className="divider" />
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={handleSave} disabled={loading}>{loading ? 'Saving...' : '✓ Save LR'}</button>
-            <button className="btn" onClick={handleClear}>Clear</button>
+            <button className="btn" onClick={handleClear}>Clear fields</button>
           </div>
           {msg && <div className={msg.type === 'success' ? 'msg-success' : 'msg-error'} style={{ marginTop: 10 }}>{msg.text}</div>}
         </>}
@@ -141,7 +257,7 @@ export default function NewLR({ user }) {
           <div className="g3" style={{ fontSize: 13, gap: 10 }}>
             <div><span style={{ color: 'var(--text2)' }}>From</span><br /><strong>{saved.office}</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>To</span><br /><strong>Ahmedabad</strong></div>
-            <div><span style={{ color: 'var(--text2)' }}>Truck</span><br /><strong>{saved.truck_number || '—'}</strong></div>
+            <div><span style={{ color: 'var(--text2)' }}>Book</span><br /><strong>Book {saved.book_series || '—'}</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>Consignor</span><br /><strong>{saved.consignor}</strong>{saved.consignor_gst && <span style={{ fontSize: 11, color: 'var(--text2)' }}><br />GST: {saved.consignor_gst}</span>}</div>
             <div><span style={{ color: 'var(--text2)' }}>Consignee</span><br /><strong>{saved.consignee}</strong>{saved.consignee_gst && <span style={{ fontSize: 11, color: 'var(--text2)' }}><br />GST: {saved.consignee_gst}</span>}</div>
             <div><span style={{ color: 'var(--text2)' }}>Articles / Weight</span><br /><strong>{saved.articles || '—'} pcs / {saved.weight_kg || '—'} kg</strong></div>
