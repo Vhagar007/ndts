@@ -11,7 +11,6 @@ import Dashboard from './pages/Dashboard'
 function Nav({ user, onLogout }) {
   const loc = useLocation()
   if (loc.pathname.startsWith('/track')) return null
-
   const isOffice = user.role === 'office'
   const isAhmedabad = user.role === 'ahmedabad'
   const isAdmin = user.role === 'admin'
@@ -19,10 +18,11 @@ function Nav({ user, onLogout }) {
   return (
     <nav className="topnav no-print">
       <a className="topnav-brand" href="/">New <span>Diamond</span></a>
+      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/office">Dashboard</NavLink>}
       {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/new-lr">New LR</NavLink>}
-      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/office">My Office</NavLink>}
+      {(isOffice || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dispatch">Dispatch</NavLink>}
       {(isAhmedabad || isAdmin) && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/ahmedabad">Ahmedabad</NavLink>}
-      {isAdmin && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dashboard">All Offices</NavLink>}
+      {isAdmin && <NavLink className={({isActive})=>'nav-link'+(isActive?' active':'')} to="/dashboard">All offices</NavLink>}
       <div className="nav-right">
         <span style={{ fontSize: 12, color: 'var(--text2)', marginRight: 8 }}>{user.office}</span>
         <NavLink className="btn btn-sm btn-blue no-print" to="/track">Track</NavLink>
@@ -33,7 +33,7 @@ function Nav({ user, onLogout }) {
 }
 
 function DefaultRedirect({ user }) {
-  if (user.role === 'office') return <Navigate to="/new-lr" replace />
+  if (user.role === 'office') return <Navigate to="/office" replace />
   if (user.role === 'ahmedabad') return <Navigate to="/ahmedabad" replace />
   return <Navigate to="/dashboard" replace />
 }
@@ -54,7 +54,6 @@ export default function App() {
     sessionStorage.removeItem('ndts_user')
   }
 
-  // Track page always public
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/track')) {
     return (
       <BrowserRouter>
@@ -73,8 +72,9 @@ export default function App() {
       <Nav user={user} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={<DefaultRedirect user={user} />} />
-        <Route path="/new-lr" element={<NewLR user={user} />} />
         <Route path="/office" element={<OfficeDashboard user={user} />} />
+        <Route path="/new-lr" element={<NewLR user={user} />} />
+        <Route path="/dispatch" element={<OfficeDashboard user={user} />} />
         <Route path="/ahmedabad" element={<Ahmedabad user={user} />} />
         <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/track" element={<Track />} />

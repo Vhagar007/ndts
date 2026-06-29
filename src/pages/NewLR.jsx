@@ -2,33 +2,41 @@ import { useState } from 'react'
 import { supabase, fmtDate } from '../lib/supabase'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const OFFICES = ['Bhiwandi', 'Vasai', 'Bhayandar', 'Dongri', 'Vapi']
 
 export default function NewLR({ user }) {
   const office = user.office === 'Admin' ? '' : user.office
   const [adminOffice, setAdminOffice] = useState('')
   const activeOffice = user.office === 'Admin' ? adminOffice : office
 
-  const [form, setForm] = useState({ lr: '', date: today(), consignor: '', consignee: '', articles: '', weight: '', particulars: '', payment: 'topay', amount: '', gst: '', truck: '' })
+  const [form, setForm] = useState({
+    lr: '', date: today(), consignor: '', consignor_gst: '',
+    consignee: '', consignee_gst: '', articles: '', weight: '',
+    particulars: '', payment: 'topay', amount: '', truck: ''
+  })
   const [msg, setMsg] = useState(null)
   const [saved, setSaved] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const OFFICES = ['Bhiwandi', 'Vasai', 'Bhayandar', 'Dongri', 'Vapi']
   const payLabel = { topay: 'To Pay', paid: 'Paid', blank: '—' }
 
   async function handleSave() {
     if (!activeOffice || !form.lr || !form.date || !form.consignor || !form.consignee) {
-      setMsg({ type: 'error', text: 'Please fill all required fields.' }); return
+      setMsg({ type: 'error', text: 'Please fill office, LR number, date, consignor and consignee.' }); return
     }
     setLoading(true)
     const record = {
       lr_number: form.lr.trim(), office: activeOffice, date: form.date,
       consignor: form.consignor.trim(), consignee: form.consignee.trim(),
-      articles: form.articles || null, weight_kg: form.weight ? parseFloat(form.weight) : null,
-      particulars: form.particulars.trim() || null, payment_type: form.payment,
+      consignor_gst: form.consignor_gst.trim() || null,
+      consignee_gst: form.consignee_gst.trim() || null,
+      articles: form.articles || null,
+      weight_kg: form.weight ? parseFloat(form.weight) : null,
+      particulars: form.particulars.trim() || null,
+      payment_type: form.payment,
       amount: form.amount ? parseFloat(form.amount) : null,
-      gst_number: form.gst.trim() || null, truck_number: form.truck.trim() || null,
+      truck_number: form.truck.trim() || null,
       status: 'booked', booked_at: new Date().toISOString(),
     }
     const { data, error } = await supabase.from('lr_entries').insert([record]).select().single()
@@ -43,7 +51,7 @@ export default function NewLR({ user }) {
   }
 
   function handleClear() {
-    setForm({ lr: '', date: today(), consignor: '', consignee: '', articles: '', weight: '', particulars: '', payment: 'topay', amount: '', gst: '', truck: '' })
+    setForm({ lr: '', date: today(), consignor: '', consignor_gst: '', consignee: '', consignee_gst: '', articles: '', weight: '', particulars: '', payment: 'topay', amount: '', truck: '' })
     setMsg(null); setSaved(null)
   }
 
@@ -69,24 +77,30 @@ export default function NewLR({ user }) {
 
         {activeOffice && <>
           <div className="office-pill">📍 {activeOffice} → Ahmedabad</div>
+
           <div className="g2">
             <div className="fg"><label>LR number *</label><input value={form.lr} onChange={e => set('lr', e.target.value)} placeholder="e.g. 303432" /></div>
             <div className="fg"><label>Date *</label><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></div>
           </div>
+
           <div className="g2">
             <div className="fg"><label>Consignor (sender) *</label><input value={form.consignor} onChange={e => set('consignor', e.target.value)} placeholder="M/s. name" /></div>
             <div className="fg"><label>Consignee (receiver) *</label><input value={form.consignee} onChange={e => set('consignee', e.target.value)} placeholder="M/s. name" /></div>
           </div>
+
+          <div className="g2">
+            <div className="fg"><label>Consignor GST No.</label><input value={form.consignor_gst} onChange={e => set('consignor_gst', e.target.value)} placeholder="optional" /></div>
+            <div className="fg"><label>Consignee GST No.</label><input value={form.consignee_gst} onChange={e => set('consignee_gst', e.target.value)} placeholder="optional" /></div>
+          </div>
+
           <div className="g3">
             <div className="fg"><label>No. of articles</label><input type="number" value={form.articles} onChange={e => set('articles', e.target.value)} placeholder="e.g. 6" /></div>
             <div className="fg"><label>Weight (kg)</label><input type="number" value={form.weight} onChange={e => set('weight', e.target.value)} placeholder="e.g. 315" /></div>
             <div className="fg"><label>Truck number</label><input value={form.truck} onChange={e => set('truck', e.target.value)} placeholder="e.g. MH04-AB-1234" /></div>
           </div>
+
           <div className="g2">
             <div className="fg"><label>Particulars</label><input value={form.particulars} onChange={e => set('particulars', e.target.value)} placeholder="e.g. Hardware items" /></div>
-            <div className="fg"><label>GST number (optional)</label><input value={form.gst} onChange={e => set('gst', e.target.value)} /></div>
-          </div>
-          <div className="g2">
             <div className="fg">
               <label>Payment</label>
               <select value={form.payment} onChange={e => set('payment', e.target.value)}>
@@ -95,8 +109,13 @@ export default function NewLR({ user }) {
                 <option value="blank">—</option>
               </select>
             </div>
-            <div className="fg"><label>Amount (Rs.)</label><input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="e.g. 500" /></div>
           </div>
+
+          <div className="fg" style={{ maxWidth: 200 }}>
+            <label>Amount (Rs.)</label>
+            <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="e.g. 500" />
+          </div>
+
           <hr className="divider" />
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-primary" onClick={handleSave} disabled={loading}>{loading ? 'Saving...' : '✓ Save LR'}</button>
@@ -111,7 +130,7 @@ export default function NewLR({ user }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div>
               <p style={{ fontSize: 16, fontWeight: 600 }}>New Diamond Transport Service</p>
-              <p style={{ fontSize: 12, color: 'var(--text2)' }}>Old Lati Bazar, Opp. Satkar Guest House, B/H. S.T. Stand · 7878548055</p>
+              <p style={{ fontSize: 12, color: 'var(--text2)' }}>Old Lathi Bazar, Opp. Satkar Guest House · 7878548055</p>
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: 20, fontWeight: 600 }}>LR No. {saved.lr_number}</p>
@@ -123,8 +142,8 @@ export default function NewLR({ user }) {
             <div><span style={{ color: 'var(--text2)' }}>From</span><br /><strong>{saved.office}</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>To</span><br /><strong>Ahmedabad</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>Truck</span><br /><strong>{saved.truck_number || '—'}</strong></div>
-            <div><span style={{ color: 'var(--text2)' }}>Consignor</span><br /><strong>{saved.consignor}</strong></div>
-            <div><span style={{ color: 'var(--text2)' }}>Consignee</span><br /><strong>{saved.consignee}</strong></div>
+            <div><span style={{ color: 'var(--text2)' }}>Consignor</span><br /><strong>{saved.consignor}</strong>{saved.consignor_gst && <span style={{ fontSize: 11, color: 'var(--text2)' }}><br />GST: {saved.consignor_gst}</span>}</div>
+            <div><span style={{ color: 'var(--text2)' }}>Consignee</span><br /><strong>{saved.consignee}</strong>{saved.consignee_gst && <span style={{ fontSize: 11, color: 'var(--text2)' }}><br />GST: {saved.consignee_gst}</span>}</div>
             <div><span style={{ color: 'var(--text2)' }}>Articles / Weight</span><br /><strong>{saved.articles || '—'} pcs / {saved.weight_kg || '—'} kg</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>Particulars</span><br /><strong>{saved.particulars || '—'}</strong></div>
             <div><span style={{ color: 'var(--text2)' }}>Payment</span><br /><strong>{payLabel[saved.payment_type]}</strong></div>
