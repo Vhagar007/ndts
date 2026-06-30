@@ -9,6 +9,7 @@ const sLabel = { booked: 'Booked', transit: 'In transit', arrived: 'Arrived Ahme
 const payLabel = { topay: 'To Pay', paid: 'Paid', blank: '—' }
 
 function LRSearch({ user, onFound, placeholder = 'Enter LR number' }) {
+  const [book, setBook] = useState('')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
@@ -18,17 +19,23 @@ function LRSearch({ user, onFound, placeholder = 'Enter LR number' }) {
     setLoading(true); setMsg(null)
     let query = supabase.from('lr_entries').select('*').eq('lr_number', q.trim())
     if (user.role === 'office') query = query.eq('office', user.office)
+    if (book) query = query.eq('book_series', book)
     const { data } = await query
     setLoading(false)
-    if (!data || !data.length) { setMsg('No LR found for "' + q + '"'); return }
+    if (!data || !data.length) { setMsg('No LR found for "' + q + '"' + (book ? ` in Book ${book}` : '')); return }
     onFound(data)
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <select value={book} onChange={e => setBook(e.target.value)} style={{ width: 140, flexShrink: 0 }}>
+          <option value="">Any book</option>
+          <option value="A">Book A</option>
+          <option value="B">Book B</option>
+        </select>
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder={placeholder} onKeyDown={e => e.key === 'Enter' && search()} style={{ flex: 1 }} />
+          placeholder={placeholder} onKeyDown={e => e.key === 'Enter' && search()} style={{ flex: 1, minWidth: 160 }} />
         <button className="btn btn-blue" onClick={search} disabled={loading}>
           {loading ? 'Searching...' : '🔍 Search'}
         </button>
