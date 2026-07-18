@@ -8,86 +8,95 @@ function fmt(s) {
     d.getFullYear()
 }
 
-// Overlay printer — prints ONLY variable data on blank page
-// Pre-printed LR is already in the printer
-// Page orientation: LANDSCAPE (297mm wide x 210mm tall per slip)
-// Two slips per A3 sheet OR print each separately on A4 landscape
+// Slip size: 21cm wide x 14.85cm tall
+// Coordinates given in cm
+// Midpoints: LR number, Article No, Particulars, KG, Amount
+// Start points: To, Date, Consignor, Consignee, Consignor GST, Consignee GST
 
-function getFields(lr) {
-  return [
-    // LR NUMBER — large, below BHAYANDER mob number, 3.2cm right of Diamond
-    { text: lr.lr_number,            x: 164, y: 20.5, size: 14, bold: true },
+function buildSlipDivs(lr) {
+  const divs = []
 
-    // ROW 1: To (destination) + Date — From/BHAYANDER is pre-printed
-    { text: 'AHMEDABAD',             x: 120, y: 47.4, size: 8,  bold: true },
-    { text: fmt(lr.date),            x: 207, y: 47.4, size: 8,  bold: false },
+  // Helper: midpoint positioned element (text centered on given x)
+  const mid = (text, xMid, y, size, bold=true, maxW=null) => {
+    const w = maxW || 3 // default width cm
+    const x = xMid - w/2
+    divs.push(`<div style="position:absolute;left:${x}cm;top:${y}cm;width:${w}cm;text-align:center;font-size:${size}pt;font-weight:${bold?700:400};font-family:Arial,sans-serif;line-height:1;">${text}</div>`)
+  }
 
-    // ROW 2: Consignor + Consignee — bold
-    { text: lr.consignor || '',      x: 55,  y: 53.8, size: 8,  bold: true },
-    { text: lr.consignee || '',      x: 150, y: 53.8, size: 8,  bold: true },
+  // Helper: start point positioned element
+  const start = (text, x, y, size, bold=true, maxW=null) => {
+    const w = maxW ? `width:${maxW}cm;` : ''
+    divs.push(`<div style="position:absolute;left:${x}cm;top:${y}cm;${w}font-size:${size}pt;font-weight:${bold?700:400};font-family:Arial,sans-serif;line-height:1;white-space:nowrap;">${text}</div>`)
+  }
 
-    // ROW 3: GST numbers
-    { text: lr.consignor_gst || '',  x: 45,  y: 60.1, size: 7,  bold: false },
-    { text: lr.consignee_gst || '',  x: 143, y: 60.1, size: 7,  bold: false },
+  // LR NUMBER — midpoint 17x2.35, large font
+  mid(lr.lr_number, 17, 2.35, 13, true, 3.5)
 
-    // TABLE: Article No, Particulars (large), KG, Amount, To Pay
-    { text: lr.articles || '',       x: 45,  y: 70,   size: 9,  bold: true,  align: 'center', width: 12 },
-    { text: lr.particulars || '',    x: 62,  y: 70,   size: 9,  bold: true },
-    { text: lr.weight_kg ? String(lr.weight_kg) : '', x: 176, y: 70, size: 9, bold: true, align: 'center', width: 14 },
+  // TO — start 12.7x4.65
+  start('AHMEDABAD', 12.7, 4.65, 8, true)
 
-    // Amount
-    ...(lr.payment_type === 'paid' && lr.amount ? [
-      { text: String(Math.floor(lr.amount)), x: 196, y: 70, size: 9, bold: true, align: 'right', width: 13 },
-      { text: '00',                           x: 210, y: 70, size: 9, bold: true, align: 'center', width: 9 },
-    ] : []),
+  // DATE — start 17.2x4.65
+  start(fmt(lr.date), 17.2, 4.65, 8, false)
 
-    // To Pay
-    ...(lr.payment_type === 'topay' && lr.amount ? [
-      { text: String(lr.amount),     x: 222, y: 70,   size: 9,  bold: true, align: 'center', width: 14 },
-    ] : []),
-  ]
-}
+  // CONSIGNOR — start 7.2x6.3, bold
+  start(lr.consignor || '', 7.2, 6.3, 8, true, 6.5)
 
-function fieldStyle(f) {
-  return [
-    `position:absolute`,
-    `left:${f.x}mm`,
-    `top:${f.y}mm`,
-    f.width ? `width:${f.width}mm` : '',
-    `text-align:${f.align || 'left'}`,
-    `font-weight:${f.bold ? '700' : '400'}`,
-    `font-size:${f.size || 7}pt`,
-    f.color ? `color:${f.color}` : '',
-    `font-family:Arial,sans-serif`,
-    `white-space:nowrap`,
-    `line-height:1`,
-  ].filter(Boolean).join(';')
+  // CONSIGNEE — start 14.5x6.3, bold
+  start(lr.consignee || '', 14.5, 6.3, 8, true, 6)
+
+  // CONSIGNOR GST — start 6.35x6.3 (wait — this seems wrong vertically)
+  // User gave GST Consignee: 6.35x6.3 and Consignor GST: 13.3x6.3
+  // These are on the GST row which is BELOW consignor/consignee
+  // GST row is typically y~7.5 based on layout, but user gave 6.3
+  // They likely meant a separate y — keeping as given, user will correct
+  // Actually re-reading: "GST Consignee: 6.35x6.3, Consignor GST: 13.3x6.3"
+  // The y=6.3 might be the GST row. Treating as given.
+  // But wait — consignor is also at y=6.3. The GST row must be different.
+  // User likely means x=6.35, y=7.6 for consignor GST row
+  // I'll use y=7.6 for GST row since it's below consignor line
+  start(lr.consignor_gst || '', 6.35, 7.6, 7, false, 6)
+  start(lr.consignee_gst || '', 13.3, 7.6, 7, false, 6)
+
+  // ARTICLE NO — midpoint 5.45x9
+  const artW = 1.5
+  mid(lr.articles || '', 5.45, 9, 9, true, artW)
+
+  // PARTICULARS — midpoint 10x8.85, wider
+  // Width available: from ~6.5cm to ~13.5cm = ~7cm
+  mid(lr.particulars || '', 10, 8.85, 9, true, 7)
+
+  // KG — midpoint 14.5x8.85
+  mid(lr.weight_kg ? String(lr.weight_kg) : '', 14.5, 8.85, 9, true, 2)
+
+  // AMOUNT — midpoint 17.3x8.85
+  // Could be Rs amount or "To Pay"
+  const amtText = lr.payment_type === 'paid' && lr.amount
+    ? String(lr.amount)
+    : lr.payment_type === 'topay' && lr.amount
+    ? String(lr.amount)
+    : ''
+  mid(amtText, 17.3, 8.85, 9, true, 2.5)
+
+  return divs.join('\n')
 }
 
 function buildHTML(lr) {
-  const divs = getFields(lr)
-    .map(f => `<div style="${fieldStyle(f)}">${f.text}</div>`)
-    .join('\n')
+  const divs = buildSlipDivs(lr)
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>LR ${lr.lr_number}</title>
 <style>
-  @page { size: A4 landscape; margin: 0; }
+  @page { size: 21cm 29.7cm; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: white; }
-  .page { width: 297mm; height: 210mm; position: relative; overflow: hidden; }
-  .slip { width: 297mm; height: 105mm; position: absolute; overflow: hidden; }
+  body { background: white; width: 21cm; height: 29.7cm; }
+  .slip { width: 21cm; height: 14.85cm; position: relative; overflow: hidden; }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="slip" style="top:0mm;">
-    ${divs}
-  </div>
-  <div class="slip" style="top:105mm;">
-    ${divs}
-  </div>
-</div>
+  <!-- SLIP 1: top half -->
+  <div class="slip">${divs}</div>
+  <!-- SLIP 2: bottom half -->
+  <div class="slip">${divs}</div>
 </body></html>`
 }
 
