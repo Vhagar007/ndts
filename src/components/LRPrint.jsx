@@ -8,95 +8,78 @@ function fmt(s) {
     d.getFullYear()
 }
 
-// Slip size: 21cm wide x 14.85cm tall
-// Coordinates given in cm
-// Midpoints: LR number, Article No, Particulars, KG, Amount
-// Start points: To, Date, Consignor, Consignee, Consignor GST, Consignee GST
+// All coordinates from Canva dimensions Excel sheet
+// X/Y = top-left of element, Width/Height = element size
+// Page: 21cm x 29.7cm portrait (both slips on one A4)
 
-function buildSlipDivs(lr) {
-  const divs = []
-
-  // Helper: midpoint positioned element (text centered on given x)
-  const mid = (text, xMid, y, size, bold=true, maxW=null) => {
-    const w = maxW || 3 // default width cm
-    const x = xMid - w/2
-    divs.push(`<div style="position:absolute;left:${x}cm;top:${y}cm;width:${w}cm;text-align:center;font-size:${size}pt;font-weight:${bold?700:400};font-family:Arial,sans-serif;line-height:1;">${text}</div>`)
-  }
-
-  // Helper: start point positioned element
-  const start = (text, x, y, size, bold=true, maxW=null) => {
-    const w = maxW ? `width:${maxW}cm;` : ''
-    divs.push(`<div style="position:absolute;left:${x}cm;top:${y}cm;${w}font-size:${size}pt;font-weight:${bold?700:400};font-family:Arial,sans-serif;line-height:1;white-space:nowrap;">${text}</div>`)
-  }
-
-  // LR NUMBER — midpoint 17x2.35, large font
-  mid(lr.lr_number, 17, 2.35, 13, true, 3.5)
-
-  // TO — start 12.7x4.65
-  start('AHMEDABAD', 12.7, 4.65, 8, true)
-
-  // DATE — start 17.2x4.65
-  start(fmt(lr.date), 17.2, 4.65, 8, false)
-
-  // CONSIGNOR — start 7.2x6.3, bold
-  start(lr.consignor || '', 7.2, 6.3, 8, true, 6.5)
-
-  // CONSIGNEE — start 14.5x6.3, bold
-  start(lr.consignee || '', 14.5, 6.3, 8, true, 6)
-
-  // CONSIGNOR GST — start 6.35x6.3 (wait — this seems wrong vertically)
-  // User gave GST Consignee: 6.35x6.3 and Consignor GST: 13.3x6.3
-  // These are on the GST row which is BELOW consignor/consignee
-  // GST row is typically y~7.5 based on layout, but user gave 6.3
-  // They likely meant a separate y — keeping as given, user will correct
-  // Actually re-reading: "GST Consignee: 6.35x6.3, Consignor GST: 13.3x6.3"
-  // The y=6.3 might be the GST row. Treating as given.
-  // But wait — consignor is also at y=6.3. The GST row must be different.
-  // User likely means x=6.35, y=7.6 for consignor GST row
-  // I'll use y=7.6 for GST row since it's below consignor line
-  start(lr.consignor_gst || '', 6.35, 7.6, 7, false, 6)
-  start(lr.consignee_gst || '', 13.3, 7.6, 7, false, 6)
-
-  // ARTICLE NO — midpoint 5.45x9
-  const artW = 1.5
-  mid(lr.articles || '', 5.45, 9, 9, true, artW)
-
-  // PARTICULARS — midpoint 10x8.85, wider
-  // Width available: from ~6.5cm to ~13.5cm = ~7cm
-  mid(lr.particulars || '', 10, 8.85, 9, true, 7)
-
-  // KG — midpoint 14.5x8.85
-  mid(lr.weight_kg ? String(lr.weight_kg) : '', 14.5, 8.85, 9, true, 2)
-
-  // AMOUNT — midpoint 17.3x8.85
-  // Could be Rs amount or "To Pay"
-  const amtText = lr.payment_type === 'paid' && lr.amount
-    ? String(lr.amount)
-    : lr.payment_type === 'topay' && lr.amount
-    ? String(lr.amount)
-    : ''
-  mid(amtText, 17.3, 8.85, 9, true, 2.5)
-
-  return divs.join('\n')
+function el(text, x, y, w, h, size, color, align='left') {
+  return `<div style="position:absolute;left:${x}cm;top:${y}cm;width:${w}cm;height:${h}cm;font-size:${size}pt;color:${color};font-family:Arial,Helvetica,sans-serif;font-weight:700;text-align:${align};overflow:hidden;line-height:1.1;display:flex;align-items:center;">${text}</div>`
 }
 
 function buildHTML(lr) {
-  const divs = buildSlipDivs(lr)
+  const mag = '#db2498'
+  const blk = '#000000'
+
+  const to   = 'AHMEDABAD'
+  const date = fmt(lr.date)
+  const cons = lr.consignor || ''
+  const cnse = lr.consignee || ''
+  const cgst = lr.consignor_gst || ''
+  const ngst = lr.consignee_gst || ''
+  const art  = lr.articles || ''
+  const part = lr.particulars || ''
+  const kg   = lr.weight_kg ? String(lr.weight_kg) : ''
+  const amt  = lr.amount ? String(lr.amount) : ''
+  const lrno = lr.lr_number || ''
+
+  // To Pay only if payment_type is topay
+  const topay = lr.payment_type === 'topay' && lr.amount ? String(lr.amount) : ''
+  // Amount only if paid
+  const amtVal = lr.payment_type === 'paid' && lr.amount ? String(lr.amount) : ''
+
+  // ── 1ST COPY ──────────────────────────────────────────────
+  const s1 = [
+    el(lrno, 16.44, 1.85,  2.44, 0.91, 20, blk, 'center'),
+    el(to,   12.89, 4.21,  2.05, 0.41,  9, mag),
+    el(date, 17.47, 4.21,  2.05, 0.41,  9, mag),
+    el(cons,  7.20, 4.82,  4.82, 0.83,  9, mag),
+    el(cnse, 14.66, 4.82,  4.82, 0.83,  9, mag),
+    el(cgst,  6.42, 5.86,  2.94, 0.41,  9, mag),
+    el(ngst, 13.92, 5.86,  2.94, 0.41,  9, mag),
+    el(art,   5.23, 8.64,  0.91, 0.67, 15, blk, 'center'),
+    el(part,  6.42, 8.09,  7.49, 1.82, 20, blk),
+    el(kg,   14.06, 8.64,  1.52, 0.67, 15, blk, 'center'),
+    el(amtVal,16.70,7.76,  1.52, 0.67, 15, blk, 'center'),
+    el(topay,18.72, 9.47,  1.52, 0.67, 15, blk, 'center'),
+  ].join('\n')
+
+  // ── 2ND COPY ──────────────────────────────────────────────
+  const s2 = [
+    el(lrno, 16.44, 16.71, 2.35, 0.84, 20, blk, 'center'),
+    el(to,   12.89, 19.05, 2.05, 0.41,  9, mag),
+    el(date, 17.47, 19.05, 2.05, 0.41,  9, mag),
+    el(cons,  7.20, 19.69, 4.82, 0.83,  9, mag),
+    el(cnse, 14.66, 19.69, 4.82, 0.83,  9, mag),
+    el(cgst,  6.42, 20.70, 2.94, 0.41,  9, mag),
+    el(ngst, 13.92, 20.70, 2.94, 0.41,  9, mag),
+    el(art,   5.23, 23.55, 0.91, 0.67, 15, blk, 'center'),
+    el(part,  6.42, 22.97, 7.49, 1.82, 20, blk),
+    el(kg,   14.06, 23.55, 1.52, 0.67, 15, blk, 'center'),
+    el(amtVal,16.70,22.64, 1.52, 0.67, 15, blk, 'center'),
+    el(topay,18.72, 24.30, 1.52, 0.67, 15, blk, 'center'),
+  ].join('\n')
 
   return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>LR ${lr.lr_number}</title>
+<html><head><meta charset="UTF-8"><title>LR ${lrno}</title>
 <style>
   @page { size: 21cm 29.7cm; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: white; width: 21cm; height: 29.7cm; }
-  .slip { width: 21cm; height: 14.85cm; position: relative; overflow: hidden; }
+  body { background: white; width: 21cm; height: 29.7cm; position: relative; overflow: hidden; }
 </style>
 </head>
 <body>
-  <!-- SLIP 1: top half -->
-  <div class="slip">${divs}</div>
-  <!-- SLIP 2: bottom half -->
-  <div class="slip">${divs}</div>
+${s1}
+${s2}
 </body></html>`
 }
 
