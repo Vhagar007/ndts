@@ -32,10 +32,9 @@ function buildHTML(lr) {
   const amt  = lr.amount ? String(lr.amount) : ''
   const lrno = lr.lr_number || ''
 
-  // To Pay only if payment_type is topay
-  const topay = lr.payment_type === 'topay' && lr.amount ? String(lr.amount) : ''
-  // Amount only if paid
-  const amtVal = lr.payment_type === 'paid' && lr.amount ? String(lr.amount) : ''
+  // To Pay value prints in BOTH Amount and To Pay columns
+  const topay = lr.amount ? String(lr.amount) : ''
+  const amtVal = lr.amount ? String(lr.amount) : ''
 
   // ── 1ST COPY ──────────────────────────────────────────────
   const s1 = [
