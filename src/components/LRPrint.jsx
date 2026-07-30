@@ -8,10 +8,6 @@ function fmt(s) {
     d.getFullYear()
 }
 
-// All coordinates from Canva dimensions Excel sheet
-// X/Y = top-left of element, Width/Height = element size
-// Page: 21cm x 29.7cm portrait (both slips on one A4)
-
 function el(text, x, y, w, h, size, color, align='left') {
   return `<div style="position:absolute;left:${x}cm;top:${y}cm;width:${w}cm;height:${h}cm;font-size:${size}pt;color:${color};font-family:Arial,Helvetica,sans-serif;font-weight:700;text-align:${align};overflow:hidden;line-height:1.1;display:flex;align-items:center;">${text}</div>`
 }
@@ -19,7 +15,6 @@ function el(text, x, y, w, h, size, color, align='left') {
 function buildHTML(lr) {
   const mag = '#db2498'
   const blk = '#000000'
-
   const to   = 'AHMEDABAD'
   const date = fmt(lr.date)
   const cons = lr.consignor || ''
@@ -29,14 +24,9 @@ function buildHTML(lr) {
   const art  = lr.articles || ''
   const part = lr.particulars || ''
   const kg   = lr.weight_kg ? String(lr.weight_kg) : ''
-  const amt  = lr.amount ? String(lr.amount) : ''
   const lrno = lr.lr_number || ''
+  const amt  = lr.amount ? String(lr.amount) : ''
 
-  // To Pay value prints in BOTH Amount and To Pay columns
-  const topay = lr.amount ? String(lr.amount) : ''
-  const amtVal = lr.amount ? String(lr.amount) : ''
-
-  // ── 1ST COPY ──────────────────────────────────────────────
   const s1 = [
     el(lrno, 16.44, 1.85,  2.44, 0.91, 20, blk, 'center'),
     el(to,   12.89, 4.21,  2.05, 0.41,  9, mag),
@@ -48,11 +38,10 @@ function buildHTML(lr) {
     el(art,   5.23, 8.64,  0.91, 0.67, 15, blk, 'center'),
     el(part,  6.42, 8.09,  7.49, 1.82, 20, blk),
     el(kg,   14.06, 8.64,  1.52, 0.67, 15, blk, 'center'),
-    el(amtVal,16.70,7.76,  1.52, 0.67, 15, blk, 'center'),
-    el(topay,18.72, 9.47,  1.52, 0.67, 15, blk, 'center'),
+    el(amt,  16.70, 7.76,  1.52, 0.67, 15, blk, 'center'),
+    el(amt,  18.72, 9.47,  1.52, 0.67, 15, blk, 'center'),
   ].join('\n')
 
-  // ── 2ND COPY ──────────────────────────────────────────────
   const s2 = [
     el(lrno, 16.44, 16.71, 2.35, 0.84, 20, blk, 'center'),
     el(to,   12.89, 19.05, 2.05, 0.41,  9, mag),
@@ -64,22 +53,39 @@ function buildHTML(lr) {
     el(art,   5.23, 23.55, 0.91, 0.67, 15, blk, 'center'),
     el(part,  6.42, 22.97, 7.49, 1.82, 20, blk),
     el(kg,   14.06, 23.55, 1.52, 0.67, 15, blk, 'center'),
-    el(amtVal,16.70,22.64, 1.52, 0.67, 15, blk, 'center'),
-    el(topay,18.72, 24.30, 1.52, 0.67, 15, blk, 'center'),
+    el(amt,  16.70, 22.64, 1.52, 0.67, 15, blk, 'center'),
+    el(amt,  18.72, 24.30, 1.52, 0.67, 15, blk, 'center'),
   ].join('\n')
 
   return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>LR ${lrno}</title>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>LR ${lrno}</title>
 <style>
-  @page { size: 21cm 29.7cm; margin: 0; }
+  @page {
+    size: A4 portrait;
+    margin: 0mm;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: white; width: 21cm; height: 29.7cm; position: relative; overflow: hidden; }
+  html {
+    width: 210mm;
+    height: 297mm;
+  }
+  body {
+    width: 210mm;
+    height: 297mm;
+    background: white;
+    position: relative;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
 ${s1}
 ${s2}
-</body></html>`
+</body>
+</html>`
 }
 
 export default function LRPrint({ lr, onDone }) {
@@ -90,8 +96,14 @@ export default function LRPrint({ lr, onDone }) {
       w.document.write(html)
       w.document.close()
       w.focus()
-      setTimeout(() => { w.print(); w.close(); onDone?.() }, 600)
-    } else { onDone?.() }
+      setTimeout(() => {
+        w.print()
+        w.close()
+        onDone?.()
+      }, 800)
+    } else {
+      onDone?.()
+    }
   }, [])
   return null
 }
