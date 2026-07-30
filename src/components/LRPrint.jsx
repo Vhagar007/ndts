@@ -8,13 +8,32 @@ function fmt(s) {
     d.getFullYear()
 }
 
+// All measurements from LR_Dimensions.xlsx — exact Canva coordinates
+// X/Y = top-left of element in cm from top-left of A4 page
 function el(text, x, y, w, h, size, color, align='left') {
-  return `<div style="position:absolute;left:${x}cm;top:${y}cm;width:${w}cm;height:${h}cm;font-size:${size}pt;color:${color};font-family:Arial,Helvetica,sans-serif;font-weight:700;text-align:${align};overflow:hidden;line-height:1.1;display:flex;align-items:center;">${text}</div>`
+  return `<div style="
+    position:absolute;
+    left:${x}cm;
+    top:${y}cm;
+    width:${w}cm;
+    height:${h}cm;
+    font-size:${size}pt;
+    color:${color};
+    font-family:Arial,Helvetica,sans-serif;
+    font-weight:700;
+    text-align:${align};
+    overflow:hidden;
+    line-height:1.1;
+    display:flex;
+    align-items:center;
+  ">${text}</div>`
 }
 
 function buildHTML(lr) {
-  const mag = '#db2498'
-  const blk = '#000000'
+  const M = '#db2498'   // Magenta
+  const B = '#000000'   // Black
+
+  const lrno = lr.lr_number || ''
   const to   = 'AHMEDABAD'
   const date = fmt(lr.date)
   const cons = lr.consignor || ''
@@ -24,38 +43,39 @@ function buildHTML(lr) {
   const art  = lr.articles || ''
   const part = lr.particulars || ''
   const kg   = lr.weight_kg ? String(lr.weight_kg) : ''
-  const lrno = lr.lr_number || ''
   const amt  = lr.amount ? String(lr.amount) : ''
 
+  // ── 1ST COPY (exact from Excel) ──
   const s1 = [
-    el(lrno, 16.44, 1.85,  2.44, 0.91, 20, blk, 'center'),
-    el(to,   12.89, 4.21,  2.05, 0.41,  9, mag),
-    el(date, 17.47, 4.21,  2.05, 0.41,  9, mag),
-    el(cons,  7.20, 4.82,  4.82, 0.83,  9, mag),
-    el(cnse, 14.66, 4.82,  4.82, 0.83,  9, mag),
-    el(cgst,  6.42, 5.86,  2.94, 0.41,  9, mag),
-    el(ngst, 13.92, 5.86,  2.94, 0.41,  9, mag),
-    el(art,   5.23, 8.64,  0.91, 0.67, 15, blk, 'center'),
-    el(part,  6.42, 8.09,  7.49, 1.82, 20, blk),
-    el(kg,   14.06, 8.64,  1.52, 0.67, 15, blk, 'center'),
-    el(amt,  16.70, 7.76,  1.52, 0.67, 15, blk, 'center'),
-    el(amt,  18.72, 9.47,  1.52, 0.67, 15, blk, 'center'),
-  ].join('\n')
+    el(lrno, 16.44, 1.85,  2.44, 0.91, 20, B, 'center'),
+    el(to,   12.89, 4.21,  2.05, 0.41,  9, M),
+    el(date, 17.47, 4.21,  2.05, 0.41,  9, M),
+    el(cons,  7.20, 4.82,  4.82, 0.83,  9, M),
+    el(cnse, 14.66, 4.82,  4.82, 0.83,  9, M),
+    el(cgst,  6.42, 5.86,  2.94, 0.41,  9, M),
+    el(ngst, 13.92, 5.86,  2.94, 0.41,  9, M),
+    el(art,   5.23, 8.64,  0.91, 0.67, 15, B, 'center'),
+    el(part,  6.42, 8.09,  7.49, 1.82, 20, B),
+    el(kg,   14.06, 8.64,  1.52, 0.67, 15, B, 'center'),
+    el(amt,  16.70, 7.76,  1.52, 0.67, 15, B, 'center'),
+    el(amt,  18.72, 9.47,  1.52, 0.67, 15, B, 'center'),
+  ].join('')
 
+  // ── 2ND COPY (exact from Excel) ──
   const s2 = [
-    el(lrno, 16.44, 16.71, 2.35, 0.84, 20, blk, 'center'),
-    el(to,   12.89, 19.05, 2.05, 0.41,  9, mag),
-    el(date, 17.47, 19.05, 2.05, 0.41,  9, mag),
-    el(cons,  7.20, 19.69, 4.82, 0.83,  9, mag),
-    el(cnse, 14.66, 19.69, 4.82, 0.83,  9, mag),
-    el(cgst,  6.42, 20.70, 2.94, 0.41,  9, mag),
-    el(ngst, 13.92, 20.70, 2.94, 0.41,  9, mag),
-    el(art,   5.23, 23.55, 0.91, 0.67, 15, blk, 'center'),
-    el(part,  6.42, 22.97, 7.49, 1.82, 20, blk),
-    el(kg,   14.06, 23.55, 1.52, 0.67, 15, blk, 'center'),
-    el(amt,  16.70, 22.64, 1.52, 0.67, 15, blk, 'center'),
-    el(amt,  18.72, 24.30, 1.52, 0.67, 15, blk, 'center'),
-  ].join('\n')
+    el(lrno, 16.44, 16.71, 2.35, 0.84, 20, B, 'center'),
+    el(to,   12.89, 19.05, 2.05, 0.41,  9, M),
+    el(date, 17.47, 19.05, 2.05, 0.41,  9, M),
+    el(cons,  7.20, 19.69, 4.82, 0.83,  9, M),
+    el(cnse, 14.66, 19.69, 4.82, 0.83,  9, M),
+    el(cgst,  6.42, 20.70, 2.94, 0.41,  9, M),
+    el(ngst, 13.92, 20.70, 2.94, 0.41,  9, M),
+    el(art,   5.23, 23.55, 0.91, 0.67, 15, B, 'center'),
+    el(part,  6.42, 22.97, 7.49, 1.82, 20, B),
+    el(kg,   14.06, 23.55, 1.52, 0.67, 15, B, 'center'),
+    el(amt,  16.70, 22.64, 1.52, 0.67, 15, B, 'center'),
+    el(amt,  18.72, 24.30, 1.52, 0.67, 15, B, 'center'),
+  ].join('')
 
   return `<!DOCTYPE html>
 <html>
@@ -63,27 +83,43 @@ function buildHTML(lr) {
 <meta charset="UTF-8">
 <title>LR ${lrno}</title>
 <style>
+  /* Force exact A4 portrait with zero margins — critical for alignment */
   @page {
-    size: A4 portrait;
-    margin: 0mm;
+    size: 210mm 297mm;
+    margin: 0;
+    padding: 0;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html {
+  html, body {
+    margin: 0;
+    padding: 0;
     width: 210mm;
     height: 297mm;
-  }
-  body {
-    width: 210mm;
-    height: 297mm;
-    background: white;
-    position: relative;
     overflow: hidden;
+    background: white;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: white;
   }
 </style>
 </head>
 <body>
+<div class="page">
 ${s1}
 ${s2}
+</div>
+<script>
+  // Tell browser not to scale — must be 100%
+  window.onload = function() {
+    document.title = 'LR ${lrno}';
+  };
+</script>
 </body>
 </html>`
 }
@@ -91,15 +127,18 @@ ${s2}
 export default function LRPrint({ lr, onDone }) {
   useEffect(() => {
     const html = buildHTML(lr)
-    const w = window.open('', '_blank', 'width=900,height=700')
+    const w = window.open('', '_blank', 'width=850,height=1100')
     if (w) {
       w.document.write(html)
       w.document.close()
       w.focus()
       setTimeout(() => {
         w.print()
-        w.close()
-        onDone?.()
+        // Don't close immediately — let user confirm print dialog
+        setTimeout(() => {
+          w.close()
+          onDone?.()
+        }, 2000)
       }, 800)
     } else {
       onDone?.()
