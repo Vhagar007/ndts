@@ -7,6 +7,7 @@ import OfficeDashboard from './pages/OfficeDashboard'
 import Ahmedabad from './pages/Ahmedabad'
 import Track from './pages/Track'
 import Dashboard from './pages/Dashboard'
+import InvoiceHistory from './pages/InvoiceHistory'
 
 function NavDropdown({ label, items }) {
   const [open, setOpen] = useState(false)
@@ -14,14 +15,13 @@ function NavDropdown({ label, items }) {
   const navigate = useNavigate()
   const loc = useLocation()
 
-  // close on outside click
   useEffect(() => {
     function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const isActive = items.some(item => loc.pathname === item.path || loc.search.includes(item.view))
+  const isActive = items.some(item => loc.pathname === item.path)
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -39,7 +39,7 @@ function NavDropdown({ label, items }) {
           position: 'absolute', top: '100%', left: 0,
           background: 'var(--bg)', border: '0.5px solid var(--border2)',
           borderRadius: 'var(--radius-lg)', boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
-          zIndex: 200, minWidth: 180, overflow: 'hidden'
+          zIndex: 200, minWidth: 200, overflow: 'hidden'
         }}>
           {items.map((item, i) => (
             <button key={i}
@@ -48,9 +48,9 @@ function NavDropdown({ label, items }) {
                 display: 'flex', alignItems: 'center', gap: 10,
                 width: '100%', padding: '10px 16px', textAlign: 'left',
                 border: 'none', borderBottom: i < items.length - 1 ? '0.5px solid var(--border)' : 'none',
-                background: (loc.pathname === item.path) ? 'var(--bg2)' : 'transparent',
+                background: loc.pathname === item.path ? 'var(--bg2)' : 'transparent',
                 fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                color: 'var(--text)', fontWeight: (loc.pathname === item.path) ? 500 : 400,
+                color: 'var(--text)', fontWeight: loc.pathname === item.path ? 500 : 400,
               }}>
               <span style={{ fontSize: 15 }}>{item.icon}</span>
               <div>
@@ -80,8 +80,8 @@ function Nav({ user, onLogout }) {
   ]
 
   const dispatchItems = [
-    { icon: '🚚', label: 'New dispatch',     desc: 'Dispatch a truck & create invoice', path: '/dispatch/new' },
-    { icon: '📋', label: 'Dispatch history', desc: 'View past invoices',                path: '/dispatch/history' },
+    { icon: '🚚', label: 'New dispatch',     desc: 'Dispatch a truck & generate invoice', path: '/dispatch/new' },
+    { icon: '📋', label: 'Invoice',          desc: 'Look up a past invoice by number',    path: '/invoice' },
   ]
 
   return (
@@ -143,8 +143,9 @@ export default function App() {
         <Route path="/office" element={<OfficeDashboard user={user} />} />
         <Route path="/lr/:view" element={<LRManager user={user} />} />
         <Route path="/lr" element={<Navigate to="/lr/new" replace />} />
-        <Route path="/dispatch/:view" element={<OfficeDashboard user={user} activeTab="dispatch" />} />
+        <Route path="/dispatch/new" element={<OfficeDashboard user={user} activeTab="dispatch" />} />
         <Route path="/dispatch" element={<Navigate to="/dispatch/new" replace />} />
+        <Route path="/invoice" element={<InvoiceHistory user={user} />} />
         <Route path="/ahmedabad" element={<Ahmedabad user={user} />} />
         <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/track" element={<Track />} />
