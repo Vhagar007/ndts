@@ -61,10 +61,25 @@ export default function OfficeDashboard({ user }) {
   async function createInvoice() {
     if (!dispatchSelected.length) { setDispatchMsg({ type: 'error', text: 'Select at least one LR.' }); return }
     setDispatchLoading(true)
+
+    // Get next invoice number for this book series (global sequence per book)
+    const { data: lastInv } = await supabase
+      .from('invoices')
+      .select('invoice_number')
+      .eq('book_series', bookSeries)
+      .order('invoice_number', { ascending: false })
+      .limit(1)
+
+    const lastNum = lastInv && lastInv.length > 0 && lastInv[0].invoice_number
+      ? parseInt(lastInv[0].invoice_number)
+      : 0
+    const nextNum = lastNum + 1
+
     const { data: invData, error: invErr } = await supabase.from('invoices').insert([{
       office, truck_number: truck, driver_name: driver || null,
       departure_date: date, dispatched_at: new Date().toISOString(),
       book_series: bookSeries,
+      invoice_number: String(nextNum),
     }]).select().single()
     if (invErr) { setDispatchLoading(false); setDispatchMsg({ type: 'error', text: invErr.message }); return }
     await supabase.from('lr_entries').update({
@@ -74,7 +89,7 @@ export default function OfficeDashboard({ user }) {
     const dispatchedLRs = pendingLRs.filter(l => dispatchSelected.includes(l.id))
     setInvoice({ ...invData, lrs: dispatchedLRs })
     setPendingLRs([]); setDispatchSelected([])
-    setDispatchMsg({ type: 'success', text: `Invoice (Book ${bookSeries}) created. ${dispatchSelected.length} LRs dispatched.` })
+    setDispatchMsg({ type: 'success', text: `Invoice #${nextNum} (Book ${bookSeries}) created. ${dispatchSelected.length} LRs dispatched.` })
     loadData()
   }
 
@@ -294,7 +309,7 @@ export default function OfficeDashboard({ user }) {
                   <p style={{ fontSize: 12, color: 'var(--text2)' }}>Old Lathi Bazar, Opp. Satkar Guest House · 7878548055</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: 14, fontWeight: 600 }}>Invoice #{invoice.id.slice(-6).toUpperCase()} — Book {invoice.book_series}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600 }}>Invoice #{invoice.invoice_number} — Book {invoice.book_series}</p>
                   <p style={{ fontSize: 12, color: 'var(--text2)' }}>{fmtDate(invoice.departure_date)}</p>
                 </div>
               </div>
